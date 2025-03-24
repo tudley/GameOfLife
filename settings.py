@@ -48,6 +48,21 @@ class Settings():
         # dictionary to store tile configuration for each frame
         self.frame_tile_config_dict = {}
 
+        # config for export option menus
+        self.exporting = False
+        
+        
+        self.box_left = self.screen_width/6
+        self.box_top = self.screen_height/3
+        self.box_width = 2 * self.screen_width / 3
+        self.box_height = self.screen_height/3
+        self.box_button_top = self.box_top + self.box_height/2
+        self.box_perimiter1 = self.box_width / 20
+        self.box_button_width = (self.box_width - (3 * self.box_perimiter1)) / 2
+        self.text_top = self.box_top + self.box_height/4
+        self.text_height = self.box_height/4
+        self.user_text = ''
+        self.user_typing = False
 
 
 

@@ -1,9 +1,13 @@
 import pygame
 from tile import Tile
 import sys 
+from file_dialogue import open_file_dialogue, load_json_file
+from tkinter import *
+import json
+from button import Button
+import button_functions as bf
 
 def create_board(settings, screen, tiles):
-
     """find the dimensions of tiles in the board"""
     for col_num in range(settings.cols):
         print("Col num", col_num)
@@ -14,32 +18,52 @@ def create_board(settings, screen, tiles):
             tile.rect.top = (row_num * tile.height)
             tile.col = col_num
             tile.row = row_num
-            tile.name = str(col_num) + ' : ' + str(row_num)
+            tile.name = str(col_num) + ':' + str(row_num)
             tiles.add(tile)
 
-def draw_screen(tiles, buttons, frame_counter, settings):
+def draw_screen(screen, tiles, buttons, frame_counter, settings, export_rect, text_button):
     """draw all elements on the screen"""
+    # Draw all the tiles
     for tile in tiles:
         tile.draw_tile()
+
+    # draw export rect
+    if settings.exporting == True:
+        pygame.draw.rect(screen, settings.live_col, export_rect)
+
+    # Draw all the buttons
+
+    
     for button in buttons:
-        button.draw_button()
+        # if exporting, show all buttons
+        if settings.exporting == True:
+            text_button.prep_msg(settings.user_text)
+            button.draw_button()
+        else:
+            # If not exporting, show all buttons but 'save', 'cancel' and 'text'
+            if (button.msg != "Cancel") and (button.msg != "Save") and (button.button_top != settings.text_top) and (button.msg != "Please enter filename below:"):
+                button.draw_button()
+    # Draw the counter
     frame_counter.prep_msg('Frame: ' + str(settings.frame))
     frame_counter.draw_counter()
     
 
+    
 
 
-def check_events(settings, tiles, play_button, reset_button, stop_button, forward_button, back_button, clear_button):
+
+def check_events(settings, tiles, play_button, reset_button, stop_button, forward_button, back_button, clear_button, import_button, export_button, cancel_button, text_button, save_button):
     """check user input"""
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
         if event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            if settings.active == False:
+            if (settings.active == False) and (settings.exporting == False):
                 check_rect(settings, tiles, mouse_x, mouse_y)   
-            check_button(settings, play_button, reset_button, stop_button, mouse_x, mouse_y, tiles, forward_button, back_button, clear_button)
-
+            check_button(settings, play_button, reset_button, stop_button, mouse_x, mouse_y, tiles, forward_button, back_button, clear_button, import_button, export_button, cancel_button, text_button, save_button)
+        if settings.user_typing == True:
+            bf.add_text(event, settings)
 def check_rect(settings, tiles, mouse_x, mouse_y):
     """change the state of a tile based on user input"""
     for tile in tiles:
@@ -106,95 +130,52 @@ def evaluate_neighbours(tiles, settings):
                 tile.change_next_turn = True
         
 
-def check_button(settings, play_button, reset_button, stop_button, mouse_x, mouse_y, tiles, forward_button, back_button, clear_button):
+def check_button(settings, play_button, reset_button, stop_button, mouse_x, mouse_y, tiles, forward_button, back_button, clear_button, import_button, export_button, cancel_button, text_button, save_button):
     """process user input on the buttons"""
 
     if play_button.rect.collidepoint(mouse_x, mouse_y):
         """Sets active to true, so board begins iterating"""
-        print('begin')
-        settings.active = True
+        bf.play_button_click(settings)
 
     elif stop_button.rect.collidepoint(mouse_x, mouse_y):
         """Sets active to false, board stops iterating"""
-        print('stop')
-        settings.active = False
+        bf.stop_button_click(settings)
         
     elif reset_button.rect.collidepoint(mouse_x, mouse_y):
         """Reset only works when board is not iterating. It sets the board back to the state at frame 0, and clears the settings.frame_tile_config dict."""
-        print('reset')
-        if settings.active == False:
-            # reset the frame and highest frame to 0
-            settings.frame, settings.highest_frame = 0, 0
-            # reset the board to state at frame = 0
-            for tile in tiles:
-                for tile_name, config in settings.frame_tile_config_dict[settings.frame].items():
-                    if tile.name == tile_name:
-                        if config == 0:
-                            tile.colour = settings.dead_col
-                        elif config == 1:
-                            tile.colour = settings.live_col
-
-            settings.frame_tile_config_dict = {}
+        bf.reset_button_click(settings, tiles)
 
     elif clear_button.rect.collidepoint(mouse_x, mouse_y):
         """Clears the board and wipes history"""
-        print('clear')
-        if settings.active == False:
-            # reset the frame and highest frame to 0
-            settings.frame, settings.highest_frame = 0, 0
-            for tile in tiles:
-                tile.colour = settings.dead_col
-            settings.frame_tile_config_dict = {}
+        bf.clear_button_click(settings, tiles)
     
     elif forward_button.rect.collidepoint(mouse_x, mouse_y):
         """Moves board forward one iteration, different methods depending on if frame + 1 has already been renderes (meaning it has an entry in settings.frame_tile_config dictionary)"""
-        print('forward')
-        if settings.active == False:
-            # This if statement checks if the board config we are requesting has already been calculated, and retreieves in from the dictionary. This avoids unnesseccary computation
-            if (settings.frame + 1) <= settings.highest_frame:
-                print("rerendering frame previously calcuated")
-                settings.frame += 1
-                print('current frame = ', settings.frame)
-                print('highest frame = ', settings.highest_frame)
-                # This block of code 
-                for tile in tiles:
-                    for tile_name, config in settings.frame_tile_config_dict[settings.frame].items():
-                        if tile.name == tile_name:
-                            if config == 0:
-                                tile.colour = settings.dead_col
-                            elif config == 1:
-                                tile.colour = settings.live_col
-
-            else:
-                print("new frame being rendered")
-                check_neighbours(tiles, settings)      
-                evaluate_neighbours(tiles, settings)
-                #change state of appropriate tiles
-                iterate_tiles(tiles, settings)
-                # iterate the frame by 1
-                settings.frame += 1
-                print('current frame = ', settings.frame)
-                print('highest frame = ', settings.highest_frame)
+        bf.forward_button_click(settings, tiles)
 
     elif back_button.rect.collidepoint(mouse_x, mouse_y):
-        print('back')
-        if settings.active == False:
-            if settings.frame -1 > -1:
-                settings.frame -= 1
-                print('current frame = ', settings.frame)
-                print('highest frame = ', settings.highest_frame)
-                for tile in tiles:
-                    for tile_name, config in settings.frame_tile_config_dict[settings.frame].items():
-                        if tile.name == tile_name:
-                            if config == 0:
-                                tile.colour = settings.dead_col
-                            elif config == 1:
-                                tile.colour = settings.live_col
+        """Moves the board back one iteration, loded from the settings.frame_tile_config dictionary"""
+        bf.back_button_click(settings, tiles)
 
-        else:
-            pass
+    elif import_button.rect.collidepoint(mouse_x, mouse_y):
+        """Import a custom board cofiguration from an external source"""
+        bf.import_button_click(settings, tiles)
 
+    elif export_button.rect.collidepoint(mouse_x, mouse_y):
+        """Change state of game to 'exporting"""
+        bf.export_button_click(settings)
 
+    elif cancel_button.rect.collidepoint(mouse_x, mouse_y):
+        """Change state of game out of 'exporting"""
+        bf.cancel_button_click(settings)
+
+    elif save_button.rect.collidepoint(mouse_x, mouse_y):
+        """Saves the tile configuration to a local file name defined by settings.user_text, and changes the 'settings.user_typing' attribute to false"""
+        bf.save_button_click(settings)
+
+    elif text_button.rect.collidepoint(mouse_x, mouse_y):
+        """Changes state of game to 'user typing', where user keystrokes are logged to create filename for export"""
+        bf.text_button_click(settings)
 
 
 def iterate_tiles(tiles, settings):

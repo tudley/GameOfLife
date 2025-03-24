@@ -11,7 +11,8 @@ class FrameCounter():
 
         self.rect = pygame.Rect(settings.frame_counter_left, settings.frame_counter_top, settings.frame_counter_width, settings.frame_counter_height)  
         self.font = pygame.font.SysFont(None, 48)
-        self.prep_msg('Frame: ' + msg)
+        self.msg = msg
+        self.prep_msg(msg)
 
 
     def prep_msg(self, msg):

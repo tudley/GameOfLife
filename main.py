@@ -2,7 +2,6 @@ from settings import Settings
 import pygame
 import game_functions as gf
 from pygame.sprite import Group
-import sys
 from button import Button
 from time import sleep
 from frame_counter import FrameCounter
@@ -32,6 +31,14 @@ def run_game():
     clear_button = Button(settings, screen, 'Clear', settings.screen_width/2, settings.button_top1, settings.button_width2)
     buttons.extend([play_button, reset_button, stop_button, forward_button, back_button, import_button, export_button, clear_button])
 
+    # create export state architecture
+    export_rect = pygame.Rect(settings.box_left, settings.box_top, settings.box_width, settings.box_height)
+    save_button = Button(settings, screen, 'Save', settings.box_left + settings.box_perimiter1, settings.box_button_top, settings.box_button_width, button_colour = (255, 255, 255), text_colour = (0, 0, 0))
+    cancel_button = Button(settings, screen, 'Cancel', settings.box_left + settings.box_button_width + (2 * settings.box_perimiter1), settings.box_button_top, settings.box_button_width, button_colour = (255, 255, 255), text_colour = (0, 0, 0))
+    text_button = Button(settings, screen, str(settings.user_text), settings.box_left + settings.box_perimiter1, settings.text_top, settings.box_width - (2 * settings.box_perimiter1))
+    info_button = Button(settings, screen, "Please enter filename below:", settings.box_left + settings.box_perimiter1, settings.box_top, settings.box_width - (2 * settings.box_perimiter1), button_colour = (255, 255, 255), text_colour = (0, 0, 0))
+    buttons.extend([save_button, cancel_button, text_button, info_button])
+
     #create the board of tiles
     gf.create_board(settings, screen, tiles)
 
@@ -43,11 +50,11 @@ def run_game():
     while True:
 
         # actions which happen every loop independent if board is iterating
-        gf.draw_screen(tiles, buttons, frame_counter, settings) # draw all elements of the game
-        gf.save_board(tiles, settings,) #
-        gf.check_events(settings, tiles, play_button, reset_button, stop_button, forward_button, back_button, clear_button)
+        gf.draw_screen(screen, tiles, buttons, frame_counter, settings, export_rect, text_button) # draw all elements of the game
+        gf.save_board(tiles, settings,) # save board config on each loop
+        gf.check_events(settings, tiles, play_button, reset_button, stop_button, forward_button, back_button, clear_button, import_button, export_button, cancel_button, text_button, save_button) # check for user interaction
         
-
+        # save 'highest_frame' attribute to settings containing the highest frame counter calculated. This allows rerendering of previously calculated board onfigurations.
         if settings.frame >= settings.highest_frame:
             settings.highest_frame = settings.frame
 
